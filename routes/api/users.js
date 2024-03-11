@@ -74,7 +74,7 @@ router.post('/register', async (req, res) => {
     // Send email after successful registration
     const msg = {
       to: email,
-      from: process.env.MAILGUN_EMAIL_FROM,
+      from: sendVerificationEmail, 
       subject: 'Welcome to our platform',
       text: `Hello ${name},\n\nWelcome to our platform! Your account has been successfully created.`,
     };
@@ -125,9 +125,9 @@ router.post('/register', async (req, res) => {
 
 router.post('/login', async (req, res) => {
   try {
-    const { email, password, isVerified } = req.body;
+    const { email, password } = req.body;
 
-    const validation = loginSchema.validate({ email, password, isVerified });
+    const validation = loginSchema.validate({ email, password });
     if (validation.error) {
       return res.status(400).json({ message: validation.error.details[0].message });
     }
