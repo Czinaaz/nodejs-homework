@@ -9,7 +9,7 @@ require('dotenv').config();
 const gravatar = require('gravatar');
 const multer = require('multer');
 const { verify, verifyByEmail } = require('../../controllers/userController'); // Import verify and verifyByEmail
-
+const sendVerificationEmail = require('../helpers/mailgun');
 const mailgun = require('mailgun-js')({ apiKey: process.env.MAILGUN_API_KEY, domain: process.env.MAILGUN_DOMAIN });
 
 router.get('/verify/:verificationToken', verify);
@@ -92,6 +92,36 @@ router.post('/register', async (req, res) => {
     res.status(500).json({ message: 'Registration failed' });
   }
 });
+
+
+router.post('/register', async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+
+    const validation = registerSchema.validate({ name, email, password });
+    if (validation.error) {
+      return res.status(400).json({ message: validation.error.details[0].message });
+    }
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(409).json({ message: 'User with this email already exists' });
+    }
+
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    const newUser = new User({ name, email, password: hashedPassword, isVerified: false });
+    const savedUser = await newUser.save();
+
+    await sendVerificationEmail(savedUser);
+
+    res.status(201).json({ message: 'User registered successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Registration failed' });
+  }
+});
+
 
 router.post('/login', async (req, res) => {
   try {

@@ -2,7 +2,6 @@ const User = require('../models/users');
 const generateVerificationToken = require('../helpers/uuid');
 const sendVerificationEmail = require('../helpers/mailgun');
 
-
 exports.resendVerificationEmail = async (req, res) => {
   const { email } = req.body;
   try {
@@ -20,20 +19,17 @@ exports.resendVerificationEmail = async (req, res) => {
   }
 };
 
-
-
 exports.register = async (req, res) => {
   try {
     const user = new User(req.body);
     user.verificationToken = generateVerificationToken();
     await user.save();
     await sendVerificationEmail(user);
-    res.status(201).json({ user });
+    res.status(201).json({ message: 'Verification email sent' });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 };
-
 
 exports.verifyEmail = async (req, res) => {
   const { verificationToken } = req.params;
