@@ -1,39 +1,46 @@
-const express = require('express');
-const logger = require('morgan');
-const cors = require('cors');
-const mongoose = require('mongoose');
-const contactsRouter = require('./routes/api/contacts');
-const usersRouter = require('./routes/api/users')
+import cors from "cors";
+import logger from "morgan";
+import express from "express";
+import path from "path";
 
-require('dotenv').config();
-const uri = process.env.DB_HOST;
-mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+import { router as contactsRouter } from "./routes/api/contacts.js";
 
-mongoose.connection.on('connected', () => {
-  console.log('MongoDB connection successful');
-});
+import { router as usersRouter } from "./routes/api/users.js";
 
-mongoose.connection.on('error', (err) => {
-  console.log(`MongoDB connection error: ${err}`);
-});
+import setJWTStrategy from "./config/userAuthStrategy.js";
+import authMiddleware from "./middleware/autMiddleware.js";
 
 const app = express();
 
-const formatsLogger = app.get('env') === 'development' ? 'dev' : 'short';
+const formatsLogger = app.get("env") === "development" ? "dev" : "short";
 
 app.use(logger(formatsLogger));
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.resolve(process.cwd(), "./public")));
 
-app.use('/contacts', contactsRouter);
-app.use('/users', usersRouter);
+setJWTStrategy();
+
+app.use("/api/contacts", authMiddleware, contactsRouter);
+app.use("/api/users", usersRouter);
 
 app.use((req, res) => {
-  res.status(404).json({ message: 'Not found' });
+  res.status(404).json({
+    status: "error",
+    code: 404,
+    message: "Use api on routes: /api/contacts",
+    data: "Not found",
+  });
 });
 
 app.use((err, req, res, next) => {
-  res.status(500).json({ message: err.message });
+  console.log(err.stack);
+  res.status(500).json({
+    status: "fail",
+    code: 500,
+    message: err.message,
+    data: "Internal Server Error",
+  });
 });
 
-module.exports = app;
+export { app };
